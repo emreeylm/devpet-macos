@@ -20,6 +20,8 @@ final class FloatingPanel: NSPanel {
     private var resizing = false
     private var lastMode = ""
     private var lastDashboardLayout = ""
+    private var applying = false
+    private var fallbackWindows: Set<ObjectIdentifier> = []
     init(model: AppModel) {
         self.model = model
         pet = FloatingPanel(contentRect: CGRect(x: 100, y: 100, width: 160, height: 176), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -40,15 +42,17 @@ final class FloatingPanel: NSPanel {
         stats.minSize = NSSize(width: 310, height: 180); stats.maxSize = NSSize(width: 850, height: 800)
         lastMode = model.preferences.mode
         stats.minSize = NSSize(width: 390, height: model.preferences.dashboardHeight)
+        resizing = true
         restoreSaved(pet, key: "petFrame", defaultOffset: NSPoint(x: 210, y: 310))
         restoreSaved(stats, key: "statsFrame", defaultOffset: NSPoint(x: 470, y: 480))
+        resizing = false
         let disclosureLayoutMigrated = model.store.defaults.bool(forKey: "disclosureLayoutV1")
         lastDashboardLayout = disclosureLayoutMigrated ? model.preferences.dashboardLayoutID : ""
         model.store.defaults.set(true, forKey: "disclosureLayoutV1")
         model.onSettings = { [weak self] in self?.showSettings() }
         model.onRestore = { [weak self] in self?.resetPositions() }
         subscription = model.preferencesChanged.sink { [weak self] in self?.apply() }
-        screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in Task { @MainActor in self?.recoverWindows(); self?.reassertFloatingWindows() } }
+        screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in Task { @MainActor in self?.restoreAfterDisplayChange(); self?.reassertFloatingWindows() } }
         let workspace = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didActivateApplicationNotification] {
             workspaceObservers.append(workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
@@ -87,6 +91,14 @@ final class FloatingPanel: NSPanel {
         return p.petVisible && !(p.attachPet && p.statsVisible && p.mode != "pet")
     }
     func apply() {
+        guard !applying else { return }
+        applying = true
+        defer { applying = false }
+        let modeChanged = lastMode != model.preferences.mode
+        if modeChanged {
+            if pet.isVisible { save(pet, mode: lastMode) }
+            if stats.isVisible { save(stats) }
+        }
         let p = model.preferences
         resizing = true
         for window in [pet, stats] {
@@ -95,7 +107,10 @@ final class FloatingPanel: NSPanel {
             window.alphaValue = p.opacity
         }
         pet.ignoresMouseEvents = p.mode != "minimal" && p.clickThrough
+        let petTop = pet.frame.maxY
         pet.setContentSize(NSSize(width: p.petWindowWidth, height: p.petWindowHeight))
+        pet.setFrameOrigin(NSPoint(x: pet.frame.minX, y: petTop - pet.frame.height))
+        if modeChanged { restoreRemembered(pet) }
         if lastMode != p.mode {
             stats.minSize = NSSize(width: 390, height: 180)
             stats.setContentSize(NSSize(width: 430, height: 530))
@@ -110,6 +125,7 @@ final class FloatingPanel: NSPanel {
             stats.setFrame(fitted, display: true, animate: stats.isVisible && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
             lastDashboardLayout = p.dashboardLayoutID
         }
+        if modeChanged && p.mode == "expanded" { restoreRemembered(stats) }
         resizing = false
         recoverWindows()
         setVisible(pet, shouldShowStandalonePet)
@@ -141,10 +157,16 @@ final class FloatingPanel: NSPanel {
             window.contentView = NSHostingView(rootView: SettingsView(model: model))
             window.center(); settings = window
         }
+        Task { await model.refreshNotificationAuthorization() }
         NSApp.activate(ignoringOtherApps: true)
         settings?.makeKeyAndOrderFront(nil)
     }
     func resetPositions() {
+        for mode in ["pet", "minimal", "expanded"] {
+            model.store.defaults.removeObject(forKey: "windowPlacementV2." + mode)
+            model.store.defaults.removeObject(forKey: "windowPlacementV2." + mode + ".lastDisplay")
+        }
+        fallbackWindows.removeAll()
         model.preferences.clickThrough = false; model.preferences.petVisible = true; model.preferences.statsVisible = true
         for (window, x, y) in [(pet, 210.0, 310.0), (stats, 470.0, 480.0)] {
             if let screen = NSScreen.main?.visibleFrame { window.setFrameOrigin(NSPoint(x: screen.maxX - x, y: screen.maxY - y)) }
@@ -152,6 +174,7 @@ final class FloatingPanel: NSPanel {
         recoverWindows(); save(pet); save(stats)
     }
     private func restoreSaved(_ window: NSWindow, key: String, defaultOffset: NSPoint) {
+        if restoreRemembered(window) { return }
         let defaults = model.store.defaults
         guard let saved = defaults.dictionary(forKey: key), let x = saved["x"] as? Double, let y = saved["y"] as? Double, x.isFinite, y.isFinite else {
             if let frame = NSScreen.main?.visibleFrame { window.setFrameOrigin(NSPoint(x: frame.maxX - defaultOffset.x, y: frame.maxY - defaultOffset.y)) }; return
@@ -183,12 +206,69 @@ final class FloatingPanel: NSPanel {
     func windowDidChangeBackingProperties(_ notification: Notification) {
         if let window = notification.object as? NSWindow { updateRenderingScale(window) }
     }
-    func windowDidMove(_ notification: Notification) { if let window = notification.object as? NSWindow, !resizing { save(window) } }
-    func windowDidResize(_ notification: Notification) { if let window = notification.object as? NSWindow, !resizing { save(window) } }
-    private func save(_ window: NSWindow) {
+    func windowDidMove(_ notification: Notification) { if let window = notification.object as? NSWindow, !resizing && !applying {
+        fallbackWindows.remove(ObjectIdentifier(window)); save(window)
+    } }
+    func windowDidResize(_ notification: Notification) { if let window = notification.object as? NSWindow, !resizing && !applying {
+        fallbackWindows.remove(ObjectIdentifier(window)); save(window)
+    } }
+    private var displays: [DisplayArea] {
+        NSScreen.screens.map { screen in
+            let number = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
+            let id: String
+            if let uuid = CGDisplayCreateUUIDFromDisplayID(number)?.takeRetainedValue() {
+                id = CFUUIDCreateString(nil, uuid) as String
+            } else { id = String(number) }
+            return DisplayArea(id: id, frame: screen.visibleFrame)
+        }
+    }
+    private func placementKey(_ window: NSWindow, mode: String? = nil) -> String {
+        "windowPlacementV2." + (window === stats ? "expanded" : ((mode ?? model.preferences.mode) == "minimal" ? "minimal" : "pet"))
+    }
+    private func placements(for key: String) -> [String: SavedWindowPlacement] {
+        guard let data = model.store.defaults.data(forKey: key), let placements = try? JSONDecoder().decode([String: SavedWindowPlacement].self, from: data) else { return [:] }
+        return placements
+    }
+    @discardableResult private func restoreRemembered(_ window: NSWindow) -> Bool {
+        let key = placementKey(window), saved = placements(for: key)
+        guard let last = model.store.defaults.string(forKey: key + ".lastDisplay"), let lastPlacement = saved[last], lastPlacement.isValid else { return false }
+        let available = displays
+        if available.contains(where: { $0.id == last }) { fallbackWindows.remove(ObjectIdentifier(window)) }
+        else { fallbackWindows.insert(ObjectIdentifier(window)) }
+        let placement = available.contains(where: { $0.id == last }) ? lastPlacement : (available.compactMap { saved[$0.id] }.first(where: \.isValid) ?? lastPlacement)
+        let size = window === pet ? NSSize(width: model.preferences.petWindowWidth, height: model.preferences.petWindowHeight) : placement.frame.size
+        // If its monitor is absent, use a safe fallback without overwriting its saved location.
+        var fitted = placement.restored(on: available, size: size)
+        if window === stats {
+            fitted.size.width = max(fitted.width, window.minSize.width)
+            fitted.size.height = max(fitted.height, window.minSize.height)
+            fitted = UsageLogic.restore(frame: fitted, screens: available.map(\.frame))
+        }
+        window.setFrame(fitted, display: false)
+        return true
+    }
+    private func restoreAfterDisplayChange() {
+        resizing = true
+        for window in [pet, stats] { restoreRemembered(window) }
+        resizing = false
+        recoverWindows()
+        updateRenderingScale(pet); updateRenderingScale(stats)
+    }
+    func savePositions() {
+        for window in [pet, stats] where window.isVisible { save(window) }
+    }
+    private func save(_ window: NSWindow, mode: String? = nil) {
+        guard window === pet || window === stats, !resizing, !fallbackWindows.contains(ObjectIdentifier(window)) else { return }
         let frame = window.frame
-        let screen = (window.screen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.intValue ?? 0
-        model.store.defaults.set(["x": frame.minX, "y": frame.minY, "width": frame.width, "height": frame.height, "screen": Double(screen)], forKey: window === pet ? "petFrame" : "statsFrame")
+        guard let display = displays.max(by: { lhs, rhs in
+            let a = lhs.frame.intersection(frame), b = rhs.frame.intersection(frame)
+            return (a.isNull ? 0 : a.width * a.height) < (b.isNull ? 0 : b.width * b.height)
+        }) else { return }
+        let key = placementKey(window, mode: mode)
+        var saved = placements(for: key)
+        saved[display.id] = SavedWindowPlacement(frame: frame, display: display)
+        model.store.defaults.set(try? JSONEncoder().encode(saved), forKey: key)
+        model.store.defaults.set(display.id, forKey: key + ".lastDisplay")
     }
     func verify() -> [String: Bool] {
         ["petNonActivating": !pet.canBecomeKey, "statsNonActivating": !stats.canBecomeKey,

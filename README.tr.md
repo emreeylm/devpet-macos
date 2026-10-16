@@ -8,6 +8,8 @@
 
 *Ekran görüntülerindeki değerler örnek veridir; gerçek bir hesaba ait değildir.*
 
+Limit bildirimleri: Ayarlar → Davranış bölümünden %25/%15 uyarılarını, kullanım hakkı bitişini ve doğrulanmış kota yenilenmesini açabilirsiniz. Eşikler ayarlanabilir; aynı uyarı kota dönemi başına bir kez gönderilir. Minimal, Yalnız maskot ve Geniş görünümler ekran konumlarını ayrı hatırlar; monitör çıkarılırsa görünür ekrana döner.
+
 ## Neler yapar?
 
 - **Claude Code ve Codex tek yerde:** İkisini birlikte veya yalnızca birini göster.

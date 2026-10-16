@@ -116,6 +116,8 @@ public struct Preferences: Codable, Equatable, Sendable {
     public var notifications = false
     public var lowWarnings = true
     public var resetNotifications = true
+    public var exhaustedNotifications = true
+    public var earlyWarningThreshold = 25.0
     public var threshold = 15.0
     public var language = "en"
     public var codexPath = ""
@@ -170,6 +172,7 @@ public struct Preferences: Codable, Equatable, Sendable {
         opacity = opacity.isFinite ? min(max(opacity, 0.2), 1) : 1
         refreshMinutes = refreshMinutes.isFinite ? min(max(refreshMinutes, 1), 30) : 5
         threshold = threshold.isFinite ? min(max(threshold, 1), 40) : 15
+        earlyWarningThreshold = earlyWarningThreshold.isFinite ? min(max(earlyWarningThreshold, threshold), 50) : max(25, threshold)
         if !["pet", "expanded", "minimal"].contains(mode) { mode = "expanded" }
         if !["en", "tr"].contains(language) { language = "en" }
     }

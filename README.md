@@ -36,7 +36,9 @@ A coding session should not end with a surprise usage limit. DevPet puts your **
 - **Twelve pixel pets.** Each has its own mug and working, tired and sleeping illustrations. The pet's keyboard typing responds to the remaining five-hour quota.
 - **Make it fit.** Eight color themes, a custom accent, light/dark appearances, transparent backgrounds, 50–250% size and adjustable opacity. Text renders at the current display density.
 - **Native and local.** Built with SwiftUI and AppKit, with no third-party runtime packages or DevPet cloud account.
-- **Daily conveniences.** English/Turkish interface, optional launch at login, low-limit notifications, manual refresh and a clearly labeled demo mode.
+- **Quota notifications.** Optional 25%/15% warnings, exhausted-quota and confirmed-renewal alerts. Each level is sent once per quota cycle, including across app restarts; thresholds are adjustable in Settings → Behavior.
+- **Remembered placement.** Minimal, Pet Only and Expanded keep separate positions with display-aware recovery when a monitor disconnects.
+- **Daily conveniences.** English/Turkish interface, optional launch at login, manual refresh and a clearly labeled demo mode.
 
 ## Pick your view
 

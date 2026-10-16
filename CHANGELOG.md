@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.0 — 2026-10-16
+
+Add separate early (25%) and critical (15%) quota notifications, exhaustion and confirmed renewal alerts. Persist delivery levels and last quota observations across restarts and temporary provider disconnections; retry failed notification submissions without bursts. Show macOS permission state and a test button in Settings → Behavior. Demo, stale and disabled quota sources never notify.
+
+Remember positions separately for Minimal, Pet Only and Expanded using display UUIDs and relative visible-screen coordinates. Restore positions after display arrangement/resolution changes, recover safely if a monitor is absent, and retain the original monitor placement for reconnection. Keep existing preferences and migrate legacy frame storage. Suppress delegate saves during initial restoration so launching without the saved monitor does not replace its remembered position.
+
 ## 1.6.2 — 2026-10-16
 
 Extract the quota accessibility-value formatter into a typed helper to avoid a Swift compiler type-check timeout on the GitHub-hosted Xcode toolchain. Visible quota content and behavior are unchanged.

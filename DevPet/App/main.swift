@@ -1,4 +1,5 @@
 import AppKit
+import UserNotifications
 import SwiftUI
 #if canImport(DevPetCore)
 import DevPetCore
@@ -32,11 +33,12 @@ func runClaudeBridge(outputURL: URL = ClaudeProvider.bridgeURL) -> Int32 {
     } catch { return 1 }
 }
 
-@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var model: AppModel!
     var windows: WindowCoordinator!
     var menu: MenuBarController!
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = self
         NSApp.setActivationPolicy(.accessory)
         let special = CommandLine.arguments.contains("--render-gallery") || CommandLine.arguments.contains("--smoke-test")
         let defaults = special ? UserDefaults(suiteName: CommandLine.arguments.contains("--smoke-test") ? "app.devpet.verification" : "app.devpet.artwork")! : .standard
@@ -58,6 +60,10 @@ func runClaudeBridge(outputURL: URL = ClaudeProvider.bridgeURL) -> Int32 {
             }
         }
     }
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
+    }
+    func applicationWillTerminate(_ notification: Notification) { windows?.savePositions() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func renderGallery() {
         let output = CommandLine.arguments.drop { $0 != "--render-gallery" }.dropFirst().first ?? FileManager.default.currentDirectoryPath + "/Screenshots"
@@ -322,6 +328,40 @@ func runClaudeBridge(outputURL: URL = ClaudeProvider.bridgeURL) -> Int32 {
             topBar.mouseDragged(with: titleEvent(.leftMouseDragged, NSPoint(x: 75, y: y - 25)))
             topBar.mouseUp(with: titleEvent(.leftMouseUp, NSPoint(x: 100, y: y)))
             checks["titleBarMouseDragMovesWindow"] = abs(windows.stats.frame.minX - before.x + 25) < 1 && abs(windows.stats.frame.minY - before.y + 25) < 1
+        }
+        if let screen = NSScreen.main?.visibleFrame {
+            let suite = "app.devpet.placement-verification.\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let positionModel = AppModel(store: SettingsStore(defaults: defaults))
+            positionModel.preferences.demo = true; positionModel.preferences.attachPet = false
+            let positionWindows = WindowCoordinator(model: positionModel)
+            positionModel.preferences.mode = "pet"
+            positionWindows.pet.setFrameOrigin(NSPoint(x: screen.minX + 40, y: screen.minY + 50))
+            positionWindows.savePositions()
+            let petPosition = positionWindows.pet.frame.origin
+            positionModel.preferences.mode = "minimal"
+            positionWindows.pet.setFrameOrigin(NSPoint(x: screen.minX + 120, y: screen.minY + 140))
+            positionWindows.savePositions()
+            let minimalPosition = positionWindows.pet.frame.origin
+            positionModel.preferences.mode = "pet"
+            checks["petModeRemembersPosition"] = hypot(positionWindows.pet.frame.minX - petPosition.x, positionWindows.pet.frame.minY - petPosition.y) < 1
+            positionModel.preferences.mode = "minimal"
+            checks["minimalModeRemembersPosition"] = hypot(positionWindows.pet.frame.minX - minimalPosition.x, positionWindows.pet.frame.minY - minimalPosition.y) < 1
+            let relaunched = WindowCoordinator(model: positionModel)
+            checks["positionSurvivesCoordinatorRestart"] = hypot(relaunched.pet.frame.minX - minimalPosition.x, relaunched.pet.frame.minY - minimalPosition.y) < 1
+            relaunched.pet.orderOut(nil); relaunched.stats.orderOut(nil)
+            let absentID = "devpet-test-disconnected-display"
+            let absentDisplay = DisplayArea(id: absentID, frame: CGRect(x: -8000, y: 0, width: 1920, height: 1080))
+            let absentPlacement = SavedWindowPlacement(frame: CGRect(x: -7900, y: 100, width: 120, height: 91.2), display: absentDisplay)
+            defaults.set(try! JSONEncoder().encode([absentID: absentPlacement]), forKey: "windowPlacementV2.minimal")
+            defaults.set(absentID, forKey: "windowPlacementV2.minimal.lastDisplay")
+            let disconnected = WindowCoordinator(model: positionModel)
+            disconnected.savePositions()
+            checks["restartWithMissingMonitorKeepsOriginalPlacement"] = defaults.string(forKey: "windowPlacementV2.minimal.lastDisplay") == absentID
+            checks["restartWithMissingMonitorRecoversVisibleWindow"] = NSScreen.screens.contains { $0.visibleFrame.contains(disconnected.pet.frame) }
+            disconnected.pet.orderOut(nil); disconnected.stats.orderOut(nil)
+            positionWindows.pet.orderOut(nil); positionWindows.stats.orderOut(nil)
         }
         checks["demoConnected"] = model.snapshots.allSatisfy { $0.connection == .connected }
         let data = try! JSONSerialization.data(withJSONObject: checks, options: [.prettyPrinted, .sortedKeys])

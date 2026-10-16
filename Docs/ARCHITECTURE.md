@@ -4,7 +4,7 @@ DevPet is a native macOS 14+ SwiftUI/AppKit application with a Foundation/CoreGr
 
 ## Application and windows
 
-`AppModel` owns preferences, snapshots, refresh scheduling, optional notifications and display state. `WindowCoordinator` owns nonactivating floating panels and a standard settings window. Window placement is restored against currently available screen bounds. Always-on-top windows use public AppKit collection behaviors; full-screen eligibility remains controlled by macOS.
+`AppModel` owns preferences, snapshots, refresh scheduling, optional notifications and display state. `WindowCoordinator` owns nonactivating floating panels and a standard settings window. Window placement is persisted separately per mode and display UUID, with relative coordinates for resolution/arrangement changes and safe fallback when a monitor is absent. The original monitor placement is retained for reconnection. Always-on-top windows use public AppKit collection behaviors; full-screen eligibility remains controlled by macOS.
 
 Three persisted modes share the same data model:
 
@@ -38,3 +38,7 @@ Text is rendered at its final point size; sprite images use nearest-neighbor int
 `swift test` covers the Core package. `Scripts/provider-tests.py` exercises actual subprocess behavior against fake executables; `Scripts/bridge-tests.py` checks statusline sanitization and permissions. `--smoke-test` uses an isolated demo preference suite to exercise native window behavior without credentials. `--render-gallery` generates demo screenshots for visual review.
 
 Physical monitor hot-plug, every full-screen/Stage Manager configuration, Intel runtime and OS-controlled notification/login-item flows require additional hardware testing. The source target is macOS 14; CI uses macOS 26.
+
+## Notification state
+
+`QuotaNotificationTracker` keeps a local per-service/window cycle and delivered warning levels, independently of transient connection snapshots. Early/critical thresholds default to 25%/15%; exhaustion and authoritative renewal are separate switches. Delivery is marked only after UserNotifications accepts the request. Expiry alone never announces renewal. Stale, demo and unselected sources are excluded; the app presents native banners while active as well as in the background.

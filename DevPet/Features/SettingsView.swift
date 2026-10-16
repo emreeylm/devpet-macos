@@ -22,7 +22,7 @@ struct SettingsView: View {
                 }
                 Spacer()
                 Picker("Language / Dil", selection: $model.preferences.language) { Text("English").tag("en"); Text("Türkçe").tag("tr") }.labelsHidden()
-                Text("v1.6.2 · macOS").font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary).padding(.top, 8)
+                Text("v1.7.0 · macOS").font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary).padding(.top, 8)
             }.padding(22).frame(width: 205).background(model.preferences.dark ? Color(hex: 0x081220) : Color(hex: 0xEEF1E9))
             Divider()
             ScrollView {
@@ -41,6 +41,8 @@ struct SettingsView: View {
         }
         .frame(minWidth: 790, minHeight: 660)
         .environment(\.colorScheme, model.preferences.dark ? .dark : .light)
+        .task { await model.refreshNotificationAuthorization() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in Task { await model.refreshNotificationAuthorization() } }
         .onChange(of: model.preferences.demo) { _, _ in model.connectionSettingsChanged() }
         .onChange(of: model.preferences.claudeEnabled) { _, _ in model.connectionSettingsChanged() }
         .onChange(of: model.preferences.codexEnabled) { _, _ in model.connectionSettingsChanged() }
@@ -107,6 +109,7 @@ struct SettingsView: View {
                 Toggle(model.text("Transparent window background", "Şeffaf pencere arka planı"), isOn: $model.preferences.transparent)
                 Toggle(model.text("Click through pet", "Tıklamaları maskottan geçir"), isOn: $model.preferences.clickThrough).disabled(model.preferences.mode == "minimal")
                 Text(model.preferences.mode == "minimal" ? model.text("Drag anywhere to move. Right-click for refresh, settings and display modes.", "Taşımak için pencerenin herhangi bir yerinden tutun. Yenileme, ayarlar ve görünüm seçimi için sağ tıklayın.") : model.text("Use the menu bar to disable click-through or recover hidden windows. Drag the header to move the widget. Disable attachment for independent pet movement.", "Tıklama geçirgenliğini kapatmak veya pencereleri geri getirmek için menü çubuğunu kullanın. Başlığı sürükleyerek pencereyi taşıyın. Ayrı maskot kullanımı için panel bağlantısını kapatın.")).font(.caption).foregroundStyle(.secondary)
+                Text(model.text("Positions are remembered separately for Minimal, Pet Only and Expanded, including the display. If a monitor is disconnected, the widget returns to a visible screen.", "Minimal, Yalnız maskot ve Geniş konumları ekran bilgisiyle ayrı saklanır. Monitör çıkarılırsa pencere görünür ekrana döner.")).font(.caption).foregroundStyle(.secondary)
                 Button(model.text("Restore window positions", "Pencere konumlarını geri yükle")) { model.onRestore?() }
             }
         }
@@ -161,15 +164,26 @@ struct SettingsView: View {
             }
             card(model.text("Notifications", "Bildirimler")) {
                 Toggle(model.text("Enable notifications", "Bildirimleri etkinleştir"), isOn: $model.preferences.notifications)
-                Toggle(model.text("Low quota warnings", "Düşük kota uyarıları"), isOn: $model.preferences.lowWarnings)
-                Toggle(model.text("Confirmed reset notifications", "Doğrulanmış yenilenme bildirimleri"), isOn: $model.preferences.resetNotifications)
-                slider(model.text("Warning threshold", "Uyarı eşiği"), value: $model.preferences.threshold, range: 1...40, suffix: "%")
+                VStack(alignment: .leading, spacing: 14) {
+                    Toggle(model.text("Low quota warnings", "Düşük kota uyarıları"), isOn: $model.preferences.lowWarnings)
+                    slider(model.text("Early warning", "İlk uyarı"), value: $model.preferences.earlyWarningThreshold, range: max(1, model.preferences.threshold)...50, suffix: "%")
+                    slider(model.text("Critical warning", "Kritik uyarı"), value: $model.preferences.threshold, range: 1...min(40, model.preferences.earlyWarningThreshold), suffix: "%")
+                    Toggle(model.text("Quota exhausted", "Kullanım hakkı bittiğinde"), isOn: $model.preferences.exhaustedNotifications)
+                    Toggle(model.text("Confirmed quota renewal", "Kota yenilendiğinde"), isOn: $model.preferences.resetNotifications)
+                    Text(model.text("Each warning is sent once per provider and quota cycle, even after restarting DevPet. Only selected providers and quota windows are included. Demo and stale data never trigger alerts.", "Her uyarı, DevPet yeniden açılsa da sağlayıcı ve kota dönemi başına bir kez gönderilir. Seçili sağlayıcılar ve kota pencereleri izlenir. Demo veya eski veriler bildirim üretmez.")).font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Text(model.canSendNotifications ? model.text("macOS permission: Allowed", "macOS izni: Açık") : model.text("macOS permission: Not allowed yet", "macOS izni: Henüz açık değil")).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button(model.text("Send test", "Test gönder")) { Task { await model.sendTestNotification() } }
+                    }
+                }.disabled(!model.preferences.notifications)
+
             }
         }
     }
     var about: some View {
         VStack(spacing: 18) {
-            card("DevPet 1.6.2") {
+            card("DevPet 1.7.0") {
                 Text(model.text("A native desktop companion for developers.", "Geliştiriciler için yerel masaüstü dostu."))
                 Text(model.text("Original pixel characters · SwiftUI + AppKit · MIT License", "Özgün piksel karakterler · SwiftUI + AppKit · MIT Lisansı")).font(.caption).foregroundStyle(.secondary)
             }

@@ -52,7 +52,7 @@ jobs:
         run: |
           Scripts/validate.sh
           ditto -c -k --sequesterRsrc --keepParent dist/DevPet.app dist/DevPet.app.zip
-          shasum -a 256 dist/DevPet.dmg dist/DevPet.app.zip > dist/SHA256SUMS
+          (cd dist && shasum -a 256 DevPet.dmg DevPet.app.zip > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: DevPet-release

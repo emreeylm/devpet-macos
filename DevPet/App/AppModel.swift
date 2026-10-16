@@ -22,7 +22,9 @@ import OSLog
     private var generation = 0
     private var failures: [Service: Int] = [:]
     private var nextAttempt: [Service: Date] = [:]
-    private var notificationKeys: Set<String> = []
+    private var notificationTracker = QuotaNotificationTracker()
+    private var pendingNotifications: Set<String> = []
+    @Published var notificationAuthorization: UNAuthorizationStatus = .notDetermined
     private var isSleeping = false
     private var clock: AnyCancellable?
     private var observers: [NSObjectProtocol] = []
@@ -36,7 +38,7 @@ import OSLog
     var accent: Color { Palette.color(preferences.palette, hex: preferences.customHex) }
     init(store: SettingsStore = SettingsStore()) {
         self.store = store; preferences = store.load()
-        notificationKeys = Set(store.defaults.stringArray(forKey: "notificationKeys") ?? [])
+        if let data = store.defaults.data(forKey: "quotaNotificationsV2"), let tracker = try? JSONDecoder().decode(QuotaNotificationTracker.self, from: data) { notificationTracker = tracker }
         if CommandLine.arguments.contains("--demo") { preferences.demo = true }
         clock = Timer.publish(every: 30, on: .main, in: .common).autoconnect().sink { [weak self] date in self?.now = date }
         let center = NSWorkspace.shared.notificationCenter
@@ -93,7 +95,8 @@ import OSLog
                             self?.now = Date()
                         }
                     }
-                    notify(result, resets: confirmed.map(\.kind))
+                    await notify(result)
+                    guard currentGeneration == generation, !Task.isCancelled else { return }
                 }
             } else {
                 let count = min((failures[result.service] ?? 0) + 1, 6)
@@ -112,36 +115,73 @@ import OSLog
         celebrationUntil = .distantPast; demoMood = nil; failures = [:]; nextAttempt = [:]
         restartPolling()
     }
+    func refreshNotificationAuthorization() async {
+        notificationAuthorization = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
     func enableNotifications() {
         guard preferences.notifications else { return }
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
-            Task { @MainActor in if !granted { self?.systemMessage = self?.text("Notifications are disabled in System Settings.", "Bildirimler Sistem Ayarları’nda kapalı.") ?? "" } }
+        Task {
+            do {
+                let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+                systemMessage = granted ? "" : text("Notifications are disabled in System Settings.", "Bildirimler Sistem Ayarları’nda kapalı.")
+            } catch { systemMessage = error.localizedDescription }
+            await refreshNotificationAuthorization()
+            if canSendNotifications {
+                for snapshot in snapshots { await notify(snapshot) }
+            }
         }
     }
-    private func notify(_ snapshot: UsageSnapshot, resets: [WindowKind]) {
-        guard preferences.notifications, snapshot.isFresh(at: now, maxAge: preferences.staleAge) else { return }
-        for window in snapshot.windows where preferences.windows.contains(window.kind) && window.isValid(at: now) {
-            let event: String?
-            if resets.contains(window.kind) && preferences.resetNotifications { event = "reset" }
-            else if window.remaining == 0 { event = "exhausted" }
-            else if window.remaining < preferences.threshold && preferences.lowWarnings { event = "low" }
-            else { event = nil }
-            guard let event else { continue }
-            let key = "\(snapshot.service.rawValue)-\(window.kind.rawValue)-\(window.resetsAt?.timeIntervalSince1970 ?? 0)-\(event)"
-            guard !notificationKeys.contains(key) else { continue }
-            let content = UNMutableNotificationContent()
-            content.title = "DevPet · \(snapshot.service.title)"
-            let name = window.kind == .fiveHour ? text("5-hour", "5 saatlik") : text("Weekly", "Haftalık")
-            content.body = event == "reset" ? "\(name): " + text("Quota reset confirmed.", "Kota yenilenmesi doğrulandı.") : "\(name): \(Int(window.remaining))% " + text("remaining", "kaldı")
-            content.sound = .default
-            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: key, content: content, trigger: nil)) { [weak self] error in
-                Task { @MainActor in
-                    guard error == nil, let self else { return }
-                    self.notificationKeys.insert(key)
-                    if self.notificationKeys.count > 512 { self.notificationKeys = Set(self.notificationKeys.sorted().suffix(256)) }
-                    self.store.defaults.set(Array(self.notificationKeys), forKey: "notificationKeys")
-                }
+    var canSendNotifications: Bool { notificationAuthorization == .authorized || notificationAuthorization == .provisional }
+    func sendTestNotification() async {
+        await refreshNotificationAuthorization()
+        guard canSendNotifications else {
+            systemMessage = text("Allow DevPet notifications in System Settings → Notifications.", "Sistem Ayarları → Bildirimler’den DevPet bildirimlerine izin verin."); return
+        }
+        let content = UNMutableNotificationContent()
+        content.title = "DevPet"
+        content.body = text("Limit notifications are ready. Keep building!", "Limit bildirimleri hazır. Çalışmaya devam!")
+        content.sound = .default
+        do {
+            try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "devpet-notification-test", content: content, trigger: nil))
+            systemMessage = text("Test notification sent.", "Test bildirimi gönderildi.")
+        } catch { systemMessage = error.localizedDescription }
+    }
+    private func saveNotificationTracker() {
+        store.defaults.set(try? JSONEncoder().encode(notificationTracker), forKey: "quotaNotificationsV2")
+    }
+    private func notify(_ snapshot: UsageSnapshot) async {
+        let notices = notificationTracker.notices(for: snapshot, preferences: preferences, now: now)
+        saveNotificationTracker()
+        guard !notices.isEmpty else { return }
+        await refreshNotificationAuthorization()
+        guard preferences.notifications, !preferences.demo, canSendNotifications else { return }
+        for notice in notices {
+            guard preferences.notifications, !preferences.demo, snapshot.isFresh(at: Date(), maxAge: preferences.staleAge), preferences.services.contains(notice.service), preferences.windows.contains(notice.window.kind) else { continue }
+            switch notice.kind {
+            case .reset: guard preferences.resetNotifications else { continue }
+            case .exhausted: guard preferences.exhaustedNotifications else { continue }
+            case .early, .critical: guard preferences.lowWarnings else { continue }
             }
+            guard notificationTracker.needsDelivery(notice), pendingNotifications.insert(notice.id).inserted else { continue }
+            defer { pendingNotifications.remove(notice.id) }
+            let content = UNMutableNotificationContent()
+            content.title = "DevPet · \(notice.service.title)"
+            let name = notice.window.kind == .fiveHour ? text("5-hour", "5 saatlik") : text("Weekly", "Haftalık")
+            switch notice.kind {
+            case .reset: content.body = name + ": " + text("Quota renewed. You can continue working.", "Kota yenilendi. Çalışmaya devam edebilirsin.")
+            case .exhausted: content.body = name + ": " + text("Quota exhausted.", "Kullanım hakkın bitti.")
+            case .early, .critical:
+                content.body = name + ": " + String(Int(notice.window.remaining.rounded(.down))) + text("% remaining.", "% kullanım hakkın kaldı.")
+            }
+            if let reset = notice.window.resetsAt, notice.kind != .reset {
+                content.body += " " + text("Renews in ", "Yenilenmesine kalan: ") + UsageLogic.countdown(reset, now: now) + "."
+            }
+            content.sound = .default
+            do {
+                try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: notice.id, content: content, trigger: nil))
+                notificationTracker.delivered(notice)
+                saveNotificationTracker()
+            } catch { log.error("Could not schedule quota notification.") }
         }
     }
     var loginEnabled: Bool { SMAppService.mainApp.status == .enabled }
