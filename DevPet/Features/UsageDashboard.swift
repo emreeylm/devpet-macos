@@ -142,7 +142,9 @@ struct PetWidget: View {
     var interactive = true
     @Environment(\.displayScale) private var displayScale
     private var spriteUnit: Double { max(1 / displayScale, floor(model.preferences.petSpriteSide / 64 * displayScale) / displayScale) }
-    private var quotaScale: Double { model.preferences.petQuotaScale * model.preferences.size }
+    // Match the Canvas's snapped pixel scale, including non-Retina displays and fractional sizes.
+    private var renderedScale: Double { spriteUnit / (model.preferences.petBaseSpriteSide / 64) }
+    private var quotaScale: Double { model.preferences.petQuotaScale * renderedScale }
     var body: some View {
         if model.preferences.mode == "minimal" {
             MinimalUsageWidget(model: model, interactive: interactive)
@@ -158,10 +160,10 @@ struct PetWidget: View {
             if !model.preferences.services.isEmpty && !model.preferences.windows.isEmpty {
                 VStack(spacing: 4 * quotaScale) {
                     ForEach(model.snapshots.filter { model.preferences.services.contains($0.service) }, id: \.service) { snapshot in
-                        PetQuotaBadge(model: model, snapshot: snapshot, scale: quotaScale)
+                        PetQuotaBadge(model: model, snapshot: snapshot, scale: quotaScale, cardWidth: model.preferences.petQuotaWidth * renderedScale)
                     }
                 }
-                .frame(width: 140 * quotaScale, height: model.preferences.petQuotaStackHeight * quotaScale)
+                .frame(width: model.preferences.petQuotaWidth * renderedScale, height: model.preferences.petQuotaStackHeight * quotaScale)
                 .offset(y: spriteUnit * (48.5 - model.preferences.petViewportTop - model.preferences.petViewportHeight / 2) - model.preferences.petQuotaStackHeight * quotaScale / 2)
             }
         }
@@ -209,6 +211,7 @@ struct PetQuotaBadge: View {
     @ObservedObject var model: AppModel
     var snapshot: UsageSnapshot
     var scale = 1.0
+    var cardWidth: Double? = nil
     @Environment(\.displayScale) private var displayScale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
@@ -244,7 +247,7 @@ struct PetQuotaBadge: View {
                 }
             }
         }
-        .padding(.horizontal, 6 * scale).padding(.vertical, 2 * scale).frame(width: 140 * scale, height: 50 * scale)
+        .padding(.horizontal, 6 * scale).padding(.vertical, 2 * scale).frame(width: cardWidth ?? 140 * scale, height: 50 * scale)
         .background(model.preferences.dark ? Color(hex: 0x101620).opacity(0.96) : Color(hex: 0xE8ECE5).opacity(0.96), in: RoundedRectangle(cornerRadius: 6 * scale))
         .overlay(RoundedRectangle(cornerRadius: 6 * scale).stroke(LinearGradient(colors: [model.accent.opacity(0.65), Color(hex: 0xAC82E8).opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: max(1, (scale * displayScale).rounded()) / displayScale))
     }

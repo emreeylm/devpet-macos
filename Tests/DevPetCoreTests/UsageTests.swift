@@ -138,6 +138,31 @@ final class UsageTests: XCTestCase {
             }
         }
     }
+    func testQuotaStackFitsEveryStandingSpriteAtEveryDisplayScale() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let data = try Data(contentsOf: root.appendingPathComponent("DevPet/Resources/Sprites/Companions-v6.json"))
+        let metadata = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let frames = metadata["frames"] as! [[Double]]
+        let p = Preferences()
+        for start in stride(from: 0, to: frames.count, by: 3) {
+            let commonWidth = frames[start..<start + 3].map { $0[2] }.max()!
+            let commonHeight = frames[start..<start + 3].map { $0[3] }.max()!
+            let artHeight = min(40, 44 * commonHeight / commonWidth)
+            for state in 0...1 {
+                let visibleTop = 49 - artHeight * frames[start + state][3] / commonHeight
+                for backing in [1.0, 2.0] {
+                    for size in [0.5, 1, 1.3959565, 1.5, 2, 2.5] {
+                        let unit = max(1 / backing, floor(p.petBaseSpriteSide * size / 64 * backing) / backing)
+                        let renderedScale = unit / (p.petBaseSpriteSide / 64)
+                        let stackHeight = p.petQuotaStackHeight * p.petQuotaScale * renderedScale
+                        let stackTop = 48.5 * unit - stackHeight
+                        XCTAssertGreaterThanOrEqual(stackTop, visibleTop * unit - 0.01, "frame \(start + state), backing \(backing), size \(size)")
+                        XCTAssertLessThanOrEqual(48.5 * unit, 49 * unit)
+                    }
+                }
+            }
+        }
+    }
     func testPetWindowTrimsUnusedCanvasButStillContainsQuotaCards() {
         var prefs = Preferences(); prefs.selectProviders("both")
         let formerHeight = prefs.petBaseSpriteSide * 52 / 64 + 12

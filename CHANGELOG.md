@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.1 — 2026-10-16
+
+Fit the standalone quota stack inside every standing companion’s visible silhouette using a shared 26-unit height instead of the 33-unit canvas estimate. Preserve card widths and stable layout across animals and sleeping states. Match quota typography and stack height to the Canvas’s actual pixel-snapped sprite scale at fractional sizes and 1×/2× display densities. Minimal and Expanded layouts are unchanged.
+
 ## 1.7.0 — 2026-10-16
 
 Add separate early (25%) and critical (15%) quota notifications, exhaustion and confirmed renewal alerts. Persist delivery levels and last quota observations across restarts and temporary provider disconnections; retry failed notification submissions without bursts. Show macOS permission state and a test button in Settings → Behavior. Demo, stale and disabled quota sources never notify.

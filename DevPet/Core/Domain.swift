@@ -149,10 +149,11 @@ public struct Preferences: Codable, Equatable, Sendable {
     public var petBaseSpriteSide: Double { 132 }
     public var petSpriteSide: Double { petBaseSpriteSide * size }
     public var petQuotaStackHeight: Double { Double(services.count) * 54 - 4 }
-    // A shared 33-unit quota area, slightly taller than the previous rabbit layout.
-    // Animal artwork proportions must never determine text/card size.
-    public var petQuotaScale: Double { min(1, (petBaseSpriteSide * 33 / 64) / max(1, petQuotaStackHeight)) }
-    public var petQuotaWidth: Double { 140 * petQuotaScale }
+    // Fit inside the shortest standing companion, while keeping one layout for every animal/state.
+    public var petQuotaHeightUnits: Double { 26 }
+    public var petQuotaScale: Double { min(1, (petBaseSpriteSide * petQuotaHeightUnits / 64) / max(1, petQuotaStackHeight)) }
+    // Keep the established card width independently of the tighter vertical footprint.
+    public var petQuotaWidth: Double { 140 * min(1, (petBaseSpriteSide * 33 / 64) / max(1, petQuotaStackHeight)) }
     public var petBaseWindowWidth: Double {
         petBaseSpriteSide + 12 + (services.isEmpty || windows.isEmpty ? 0 : petQuotaWidth - petBaseSpriteSide * 6 / 64 + 2)
     }
