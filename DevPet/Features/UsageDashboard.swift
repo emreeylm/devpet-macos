@@ -155,16 +155,16 @@ struct PetWidget: View {
     private var companion: some View {
         HStack(spacing: 0) {
             MascotView(animal: model.preferences.animal, mood: model.mood, accent: model.accent, animate: model.preferences.animations && model.preferences.petVisible && !model.suspended, viewportTop: model.preferences.petViewportTop, viewportHeight: model.preferences.petViewportHeight)
-                .frame(width: model.preferences.petSpriteSide, height: model.preferences.petSpriteSide * model.preferences.petViewportHeight / 64)
-                .padding(.trailing, model.preferences.services.isEmpty || model.preferences.windows.isEmpty ? 0 : -(model.preferences.petSpriteSide / 2 - 26 * spriteUnit) + 2 * model.preferences.size)
+                .frame(width: model.preferences.petSpriteSide * model.preferences.petCanvasWidthUnits / 64, height: model.preferences.petSpriteSide * model.preferences.petViewportHeight / 64)
+                .padding(.trailing, model.preferences.services.isEmpty || model.preferences.windows.isEmpty ? 0 : -(model.preferences.petSpriteSide * model.preferences.petCanvasWidthUnits / 128 - 30 * spriteUnit) + 2 * model.preferences.size)
             if !model.preferences.services.isEmpty && !model.preferences.windows.isEmpty {
                 VStack(spacing: 4 * quotaScale) {
                     ForEach(model.snapshots.filter { model.preferences.services.contains($0.service) }, id: \.service) { snapshot in
-                        PetQuotaBadge(model: model, snapshot: snapshot, scale: quotaScale, cardWidth: model.preferences.petQuotaWidth * renderedScale)
+                        PetQuotaBadge(model: model, snapshot: snapshot, scale: quotaScale, cardWidth: model.preferences.petQuotaWidth * renderedScale, prominent: true)
                     }
                 }
                 .frame(width: model.preferences.petQuotaWidth * renderedScale, height: model.preferences.petQuotaStackHeight * quotaScale)
-                .offset(y: spriteUnit * (48.5 - model.preferences.petViewportTop - model.preferences.petViewportHeight / 2) - model.preferences.petQuotaStackHeight * quotaScale / 2)
+                .offset(y: spriteUnit * (49 - model.preferences.petViewportTop - model.preferences.petViewportHeight / 2) - model.preferences.petQuotaStackHeight * quotaScale / 2)
             }
         }
         .padding(.horizontal, 6 * model.preferences.size)
@@ -212,10 +212,11 @@ struct PetQuotaBadge: View {
     var snapshot: UsageSnapshot
     var scale = 1.0
     var cardWidth: Double? = nil
+    var prominent = false
     @Environment(\.displayScale) private var displayScale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        VStack(spacing: 2 * scale) {
+        VStack(spacing: (prominent ? 1 : 2) * scale) {
             HStack(spacing: 3 * scale) {
                 Rectangle().fill(snapshot.service == .claude ? Color(hex: 0xF3A36E) : model.accent).frame(width: 3 * scale, height: 3 * scale)
                 Text(snapshot.service == .claude ? "CLAUDE" : "CODEX")
@@ -233,11 +234,11 @@ struct PetQuotaBadge: View {
             HStack(spacing: 6 * scale) {
                 ForEach(WindowKind.allCases.filter { model.preferences.windows.contains($0) }) { kind in
                     let quota = snapshot.window(kind, at: model.now, maxAge: model.preferences.staleAge)
-                    VStack(spacing: scale) {
+                    VStack(spacing: prominent ? 0 : scale) {
                         Text(kind == .fiveHour ? "5h" : model.text("Week", "Hafta"))
                             .font(.system(size: 8.5 * scale, design: .monospaced)).foregroundStyle(.secondary)
                         Text(quota.map { "\(Int($0.remaining.rounded()))%" } ?? "—")
-                            .font(.system(size: 18 * scale, weight: .bold, design: .monospaced)).monospacedDigit()
+                            .font(.system(size: (prominent ? 20 : 18) * scale, weight: .bold, design: .monospaced)).monospacedDigit()
                             .contentTransition(.numericText())
                             .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: quota?.remaining)
                             .foregroundStyle(quota.map { $0.remaining < 15 ? Color(hex: 0xFF7198) : $0.remaining <= 40 ? Color(hex: 0xF4C263) : model.accent } ?? .secondary)

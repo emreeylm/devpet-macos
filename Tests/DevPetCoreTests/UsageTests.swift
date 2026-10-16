@@ -147,17 +147,19 @@ final class UsageTests: XCTestCase {
         for start in stride(from: 0, to: frames.count, by: 3) {
             let commonWidth = frames[start..<start + 3].map { $0[2] }.max()!
             let commonHeight = frames[start..<start + 3].map { $0[3] }.max()!
-            let artHeight = min(40, 44 * commonHeight / commonWidth)
+            let artHeight = 33.0
+            XCTAssertLessThanOrEqual(artHeight * commonWidth / commonHeight, 54)
             for state in 0...1 {
-                let visibleTop = 49 - artHeight * frames[start + state][3] / commonHeight
+                let visibleTop = 49 - artHeight
+                XCTAssertLessThanOrEqual(artHeight * frames[start + state][2] / frames[start + state][3], 54)
                 for backing in [1.0, 2.0] {
                     for size in [0.5, 1, 1.3959565, 1.5, 2, 2.5] {
                         let unit = max(1 / backing, floor(p.petBaseSpriteSide * size / 64 * backing) / backing)
                         let renderedScale = unit / (p.petBaseSpriteSide / 64)
                         let stackHeight = p.petQuotaStackHeight * p.petQuotaScale * renderedScale
-                        let stackTop = 48.5 * unit - stackHeight
-                        XCTAssertGreaterThanOrEqual(stackTop, visibleTop * unit - 0.01, "frame \(start + state), backing \(backing), size \(size)")
-                        XCTAssertLessThanOrEqual(48.5 * unit, 49 * unit)
+                        let stackTop = 49 * unit - stackHeight
+                        XCTAssertEqual(stackTop, visibleTop * unit, accuracy: 0.01, "frame \(start + state), backing \(backing), size \(size)")
+                        XCTAssertLessThanOrEqual(49 * unit, 49 * unit)
                     }
                 }
             }

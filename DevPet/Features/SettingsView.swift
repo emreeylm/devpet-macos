@@ -22,7 +22,7 @@ struct SettingsView: View {
                 }
                 Spacer()
                 Picker("Language / Dil", selection: $model.preferences.language) { Text("English").tag("en"); Text("Türkçe").tag("tr") }.labelsHidden()
-                Text("v1.7.1 · macOS").font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary).padding(.top, 8)
+                Text("v1.7.2 · macOS").font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary).padding(.top, 8)
             }.padding(22).frame(width: 205).background(model.preferences.dark ? Color(hex: 0x081220) : Color(hex: 0xEEF1E9))
             Divider()
             ScrollView {
@@ -183,7 +183,7 @@ struct SettingsView: View {
     }
     var about: some View {
         VStack(spacing: 18) {
-            card("DevPet 1.7.1") {
+            card("DevPet 1.7.2") {
                 Text(model.text("A native desktop companion for developers.", "Geliştiriciler için yerel masaüstü dostu."))
                 Text(model.text("Original pixel characters · SwiftUI + AppKit · MIT License", "Özgün piksel karakterler · SwiftUI + AppKit · MIT Lisansı")).font(.caption).foregroundStyle(.secondary)
             }

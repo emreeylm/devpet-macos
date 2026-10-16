@@ -20,14 +20,14 @@ struct MascotView: View {
         TimelineView(.animation(minimumInterval: 1 / 8, paused: !animate || reduceMotion)) { timeline in
             let time = previewTime ?? (animate && !reduceMotion ? timeline.date.timeIntervalSinceReferenceDate : 0)
             Canvas { context, size in
-                let unit = max(1 / displayScale, floor(min(size.width / 64, size.height / viewportHeight) * displayScale) / displayScale)
+                let unit = max(1 / displayScale, floor(min(size.width / 76, size.height / viewportHeight) * displayScale) / displayScale)
                 let physicalScale = unit * displayScale
                 func snap(_ value: Double) -> Double { (value * physicalScale).rounded() / physicalScale }
-                context.translateBy(x: ((size.width - 64 * unit) / 2 * displayScale).rounded() / displayScale,
+                context.translateBy(x: ((size.width - 76 * unit) / 2 * displayScale).rounded() / displayScale,
                                     y: ((size.height - viewportHeight * unit) / 2 * displayScale).rounded() / displayScale - viewportTop * unit)
                 context.scaleBy(x: unit, y: unit)
                 guard let frame = CompanionAtlas.frame(animal: animal, mood: mood), let cup = CoffeeCupArt.styles[animal] else { return }
-                let rect = CGRect(x: snap(44 - frame.size.width), y: snap(49 - frame.size.height), width: snap(frame.size.width), height: snap(frame.size.height))
+                let rect = CGRect(x: snap(54 - frame.size.width), y: snap(49 - frame.size.height), width: snap(frame.size.width), height: snap(frame.size.height))
                 let action = CompanionRoutine.sample(time: time, animal: animal, mood: mood)
                 drawCharacter(frame.image, in: rect, action: action, physicalScale: physicalScale, context: &context)
                 drawCoffee(cup, in: rect, physicalScale: physicalScale, context: &context)
@@ -36,7 +36,7 @@ struct MascotView: View {
                 }
                 if mood == .sleeping {
                     do {
-                        for (x, y, width, phase) in [(59.0, max(17, viewportTop + 14), 3.0, 0.0), (58.0, max(9, viewportTop + 6), 4.0, 0.5)] {
+                        for (x, y, width, phase) in [(49.0, max(17, viewportTop + 14), 3.0, 0.0), (48.0, max(9, viewportTop + 6), 4.0, 0.5)] {
                             let progress = time == 0 ? 0.5 : cycle(time / 4, phase: phase)
                             let opacity = time == 0 ? 0.85 : min(1, sin(progress * .pi) * 1.6) * 0.85
                             let top = y - (progress * 5).rounded(.down)
@@ -86,7 +86,7 @@ struct MascotView: View {
     private func drawCoffee(_ cup: CoffeeCupArt.Style, in rect: CGRect, physicalScale: Double, context: inout GraphicsContext) {
         func snap(_ value: Double) -> Double { (value * physicalScale).rounded() / physicalScale }
         // A fixed companion prop; no action, clock, paw, grip or lift affects its transform.
-        let origin = CGPoint(x: 43.5, y: rect.maxY - 21 * cupCell)
+        let origin = CGPoint(x: 53.5, y: rect.maxY - 21 * cupCell)
         context.drawLayer { layer in
             layer.translateBy(x: snap(origin.x), y: snap(origin.y))
             for (row, line) in cup.pixels.enumerated() {
@@ -125,16 +125,13 @@ enum CompanionAtlas {
     }()
     // Four source pixels per logical unit retain the reference detail at native Retina density.
     private static let pixelImages: [CGImage] = images.enumerated().map { index, source in
-        let common = commonSize(index)
-        let aspect = common.width / common.height
-        let height = min(40, 44 / aspect)
-        let width = max(1, Int((height * aspect * 4).rounded()))
-        let pixelsHigh = max(1, Int((height * 4).rounded()))
+        let common = registeredSize(index)
+        let content = contentSize(index)
+        let width = max(1, Int((common.width * 4).rounded()))
+        let pixelsHigh = 132
         guard let context = CGContext(data: nil, width: width, height: pixelsHigh, bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return source }
         context.interpolationQuality = .none
-        let drawnWidth = Double(source.width) / common.width * Double(width)
-        let drawnHeight = Double(source.height) / common.height * Double(pixelsHigh)
-        context.draw(source, in: CGRect(x: Double(width) - drawnWidth, y: 0, width: drawnWidth, height: drawnHeight))
+        context.draw(source, in: CGRect(x: Double(width) - content.width * 4, y: 0, width: content.width * 4, height: content.height * 4))
         return context.makeImage() ?? source
     }
     static var isLoaded: Bool { images.count == 36 }
@@ -143,15 +140,24 @@ enum CompanionAtlas {
         let states = images[start..<(start + 3)]
         return CGSize(width: states.map(\.width).max() ?? 1, height: states.map(\.height).max() ?? 1)
     }
+    private static func contentSize(_ index: Int) -> CGSize {
+        let source = images[index]
+        // Working and tired silhouettes each fill the shared 33-unit height.
+        // Sleeping uses the same registration box, without stretching its resting pose.
+        let height = index % 3 == 2 ? 33 * Double(source.height) / commonSize(index).height : 33
+        return CGSize(width: height * Double(source.width) / Double(source.height), height: height)
+    }
+    private static func registeredSize(_ index: Int) -> CGSize {
+        let start = index - index % 3
+        return CGSize(width: (start..<start + 3).map { contentSize($0).width }.max() ?? 1, height: 33)
+    }
     static func frame(animal: Animal, mood: Mood) -> Frame? {
         guard isLoaded, let animalIndex = Animal.allCases.firstIndex(of: animal) else { return nil }
         let first = (animalIndex / 2) * 6 + (animalIndex % 2) * 3
         let state = mood == .sleeping ? 2 : mood == .happy ? 0 : 1
-        let common = commonSize(first)
-        let aspect = common.width / common.height
-        let height = min(40, 44 / aspect)
-        return Frame(image: pixelImages[first + state], size: CGSize(width: height * aspect, height: height))
+        return Frame(image: pixelImages[first + state], size: registeredSize(first))
     }
+
 }
 
 extension Color {

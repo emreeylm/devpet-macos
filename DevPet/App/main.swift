@@ -164,6 +164,19 @@ func runClaudeBridge(outputURL: URL = ClaudeProvider.bridgeURL) -> Int32 {
             guard states.count == 3, let first = states.first else { return false }
             return states.allSatisfy { $0.size == first.size && $0.image.width == first.image.width && $0.image.height == first.image.height }
         }
+        checks["standingPetPixelsFillQuotaHeight"] = Animal.allCases.allSatisfy { animal in
+            [Mood.happy, .tired].allSatisfy { mood in
+                guard let frame = CompanionAtlas.frame(animal: animal, mood: mood), frame.size.height == 33,
+                      frame.image.bitsPerPixel == 32, let data = frame.image.dataProvider?.data,
+                      let bytes = CFDataGetBytePtr(data) else { return false }
+                let image = frame.image
+                let occupied = (0..<image.height).filter { row in
+                    (0..<image.width).contains { column in bytes[row * image.bytesPerRow + column * 4 + 3] > 8 }
+                }
+                guard let first = occupied.first, let last = occupied.last else { return false }
+                return image.height == 132 && last - first + 1 >= image.height - 2
+            }
+        }
         let initialSnapshots = model.snapshots
         model.snapshots = Service.allCases.map { service in
             UsageSnapshot(service: service, windows: [try! QuotaWindow(kind: .fiveHour, used: 20, resetsAt: model.now.addingTimeInterval(3600)), try! QuotaWindow(kind: .weekly, used: 100, resetsAt: model.now.addingTimeInterval(86400))], refreshedAt: model.now, connection: .connected)

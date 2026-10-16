@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.2 — 2026-10-16
+
+Register every working/tired companion to the same 33-unit visible height and align quota cards exactly from head to ground, restoring readable quota size. Increase Pet Only percentage typography and widen the mascot canvas to preserve character proportions without clipping wide pets. Keep mug spacing close and sleeping layout stable. Minimal quota typography is unchanged.
+
 ## 1.7.1 — 2026-10-16
 
 Fit the standalone quota stack inside every standing companion’s visible silhouette using a shared 26-unit height instead of the 33-unit canvas estimate. Preserve card widths and stable layout across animals and sleeping states. Match quota typography and stack height to the Canvas’s actual pixel-snapped sprite scale at fractional sizes and 1×/2× display densities. Minimal and Expanded layouts are unchanged.

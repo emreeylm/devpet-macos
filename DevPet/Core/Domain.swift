@@ -149,13 +149,14 @@ public struct Preferences: Codable, Equatable, Sendable {
     public var petBaseSpriteSide: Double { 132 }
     public var petSpriteSide: Double { petBaseSpriteSide * size }
     public var petQuotaStackHeight: Double { Double(services.count) * 54 - 4 }
-    // Fit inside the shortest standing companion, while keeping one layout for every animal/state.
-    public var petQuotaHeightUnits: Double { 26 }
+    // Standing artwork and quota cards share the same registered height.
+    public var petCanvasWidthUnits: Double { 76 }
+    public var petQuotaHeightUnits: Double { 33 }
     public var petQuotaScale: Double { min(1, (petBaseSpriteSide * petQuotaHeightUnits / 64) / max(1, petQuotaStackHeight)) }
     // Keep the established card width independently of the tighter vertical footprint.
     public var petQuotaWidth: Double { 140 * min(1, (petBaseSpriteSide * 33 / 64) / max(1, petQuotaStackHeight)) }
     public var petBaseWindowWidth: Double {
-        petBaseSpriteSide + 12 + (services.isEmpty || windows.isEmpty ? 0 : petQuotaWidth - petBaseSpriteSide * 6 / 64 + 2)
+        petBaseSpriteSide * petCanvasWidthUnits / 64 + 12 + (services.isEmpty || windows.isEmpty ? 0 : petQuotaWidth - petBaseSpriteSide * 8 / 64 + 2)
     }
     // Crop the unused top of the shared 64×52 art canvas without rescaling its contents.
     public var petViewportTop: Double { 15 }
