@@ -1,0 +1,24 @@
+.build/
+build/
+dist/
+*.log
+.DS_Store
+*.xcuserstate
+xcuserdata/
+*.p12
+*.p8
+.env
+
+# Local editor settings, design history and generated QA output
+.vscode/
+Screenshots/
+Docs/Design/
+Docs/VALIDATION.md
+Docs/*checks.json
+# Superseded sprite atlases; runtime uses v6
+DevPet/Resources/Sprites/Companions-v[2-5].*
+# Credentials and local configuration
+.env.*
+!.env.example
+*.pem
+*.key

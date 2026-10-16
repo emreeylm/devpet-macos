@@ -1,0 +1,47 @@
+// !$*UTF8*$!
+{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+9AF42798E8CFD7A3169DB8D1 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/App/AppModel.swift"; sourceTree = SOURCE_ROOT; };
+C8063F45A87E887C572D40C3 = { isa = PBXBuildFile; fileRef = 9AF42798E8CFD7A3169DB8D1; };
+74308E114127CF0F4DED1A5A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/App/WindowCoordinator.swift"; sourceTree = SOURCE_ROOT; };
+F05D9346423670BCBC382711 = { isa = PBXBuildFile; fileRef = 74308E114127CF0F4DED1A5A; };
+AD29ED0FE0E3F2CEB4F9B14F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/App/main.swift"; sourceTree = SOURCE_ROOT; };
+782412B35FCCAAEEFCDFCCED = { isa = PBXBuildFile; fileRef = AD29ED0FE0E3F2CEB4F9B14F; };
+5E35FBFAB6D3230961F844CD = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Core/CompanionRoutine.swift"; sourceTree = SOURCE_ROOT; };
+C12EAED15A3876486B060CE8 = { isa = PBXBuildFile; fileRef = 5E35FBFAB6D3230961F844CD; };
+DF8E28E6692EFA7874D0F8C6 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Core/Domain.swift"; sourceTree = SOURCE_ROOT; };
+0B796EB64749E5BCB79F253E = { isa = PBXBuildFile; fileRef = DF8E28E6692EFA7874D0F8C6; };
+91F6F25D6D933F3F2F99BD09 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Features/MenuBarController.swift"; sourceTree = SOURCE_ROOT; };
+4DE2E0DAFEDFCC063FCE5AE6 = { isa = PBXBuildFile; fileRef = 91F6F25D6D933F3F2F99BD09; };
+A759E84FD780813A62F1F15B = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Features/SettingsView.swift"; sourceTree = SOURCE_ROOT; };
+3EBFE86A515EDA381B0B9322 = { isa = PBXBuildFile; fileRef = A759E84FD780813A62F1F15B; };
+64AF52449BE1ED7FB4AFC900 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Features/UsageDashboard.swift"; sourceTree = SOURCE_ROOT; };
+703AC22956EBF9C0805A15DD = { isa = PBXBuildFile; fileRef = 64AF52449BE1ED7FB4AFC900; };
+8E972D6210BD11EB602F05A3 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Features/WindowDragHandle.swift"; sourceTree = SOURCE_ROOT; };
+C25838CF00AD2BED35D739C0 = { isa = PBXBuildFile; fileRef = 8E972D6210BD11EB602F05A3; };
+344391EB4F415D5167FC8133 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Mascots/CoffeeCupArt.swift"; sourceTree = SOURCE_ROOT; };
+99DEB7F8002EF76192FCD26B = { isa = PBXBuildFile; fileRef = 344391EB4F415D5167FC8133; };
+1FBD7EA933BB77FED2270D63 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Mascots/MascotView.swift"; sourceTree = SOURCE_ROOT; };
+644B7DA5AC9556EB623254B0 = { isa = PBXBuildFile; fileRef = 1FBD7EA933BB77FED2270D63; };
+03B5134BA56E039428880F8A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DevPet/Providers/UsageProviders.swift"; sourceTree = SOURCE_ROOT; };
+CE542C6BF69A628FFAC1E148 = { isa = PBXBuildFile; fileRef = 03B5134BA56E039428880F8A; };
+B2AF0F5055AEDFEE890F5234 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "DevPet/Resources/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
+CFC548649BE78353A4A0A57B = { isa = PBXBuildFile; fileRef = B2AF0F5055AEDFEE890F5234; };
+E741D10ED2702BF2D5F8A99B = { isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "Docs/INTEGRATIONS.md"; sourceTree = SOURCE_ROOT; };
+B09E6EE1A6CDDAE217CA00FF = { isa = PBXBuildFile; fileRef = E741D10ED2702BF2D5F8A99B; };
+A421DE29C24ACB5CFD8EF7FA = { isa = PBXFileReference; lastKnownFileType = folder; path = "DevPet/Resources/Sprites"; sourceTree = SOURCE_ROOT; };
+8C56162850DFD339D3641936 = { isa = PBXBuildFile; fileRef = A421DE29C24ACB5CFD8EF7FA; };
+38A007151ABE87CC01A5B6E9 = { isa = PBXFileReference; explicitFileType = wrapper.application; path = DevPet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+64292B1C2B2E13EAD8788FC8 = { isa = PBXGroup; children = (9AF42798E8CFD7A3169DB8D1,74308E114127CF0F4DED1A5A,AD29ED0FE0E3F2CEB4F9B14F,5E35FBFAB6D3230961F844CD,DF8E28E6692EFA7874D0F8C6,91F6F25D6D933F3F2F99BD09,A759E84FD780813A62F1F15B,64AF52449BE1ED7FB4AFC900,8E972D6210BD11EB602F05A3,344391EB4F415D5167FC8133,1FBD7EA933BB77FED2270D63,03B5134BA56E039428880F8A,B2AF0F5055AEDFEE890F5234,E741D10ED2702BF2D5F8A99B,A421DE29C24ACB5CFD8EF7FA,FBDC4F23F93125BBEEAE800C); sourceTree = "<group>"; };
+FBDC4F23F93125BBEEAE800C = { isa = PBXGroup; children = (38A007151ABE87CC01A5B6E9); name = Products; sourceTree = "<group>"; };
+BCE16DD0260827ECF338C787 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (C8063F45A87E887C572D40C3,F05D9346423670BCBC382711,782412B35FCCAAEEFCDFCCED,C12EAED15A3876486B060CE8,0B796EB64749E5BCB79F253E,4DE2E0DAFEDFCC063FCE5AE6,3EBFE86A515EDA381B0B9322,703AC22956EBF9C0805A15DD,C25838CF00AD2BED35D739C0,99DEB7F8002EF76192FCD26B,644B7DA5AC9556EB623254B0,CE542C6BF69A628FFAC1E148); runOnlyForDeploymentPostprocessing = 0; };
+0189424A5A60FED329FA868E = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (CFC548649BE78353A4A0A57B,B09E6EE1A6CDDAE217CA00FF,8C56162850DFD339D3641936); runOnlyForDeploymentPostprocessing = 0; };
+7561BFB015D8F536760CB671 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+89E1FD6268CC0F221A2BE178 = { isa = XCBuildConfiguration; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = dwarf; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; }; name = Debug; };
+E6DE6C99132752C914FEF632 = { isa = XCBuildConfiguration; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; SWIFT_OPTIMIZATION_LEVEL = "-O"; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; }; name = Release; };
+862894B703A6DEDF96A9DD6C = { isa = XCConfigurationList; buildConfigurations = (89E1FD6268CC0F221A2BE178,E6DE6C99132752C914FEF632); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+7082CC0B6FC1282FCEABD07A = { isa = XCBuildConfiguration; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; PRODUCT_BUNDLE_IDENTIFIER = app.devpet.mac; PRODUCT_NAME = DevPet; INFOPLIST_FILE = DevPet/Resources/Info.plist; CODE_SIGN_STYLE = Automatic; ENABLE_HARDENED_RUNTIME = YES; ENABLE_APP_SANDBOX = NO; ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; COMBINE_HIDPI_IMAGES = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = dwarf; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; }; name = Debug; };
+639A7CA24D39909E713B47F7 = { isa = XCBuildConfiguration; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; PRODUCT_BUNDLE_IDENTIFIER = app.devpet.mac; PRODUCT_NAME = DevPet; INFOPLIST_FILE = DevPet/Resources/Info.plist; CODE_SIGN_STYLE = Automatic; ENABLE_HARDENED_RUNTIME = YES; ENABLE_APP_SANDBOX = NO; ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; COMBINE_HIDPI_IMAGES = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-O"; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; }; name = Release; };
+C57128001CE614BF8549D6BB = { isa = XCConfigurationList; buildConfigurations = (7082CC0B6FC1282FCEABD07A,639A7CA24D39909E713B47F7); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+0E8A3AD980EC179856012B7E = { isa = PBXNativeTarget; buildConfigurationList = C57128001CE614BF8549D6BB; buildPhases = (BCE16DD0260827ECF338C787,7561BFB015D8F536760CB671,0189424A5A60FED329FA868E); buildRules = (); dependencies = (); name = DevPet; productName = DevPet; productReference = 38A007151ABE87CC01A5B6E9; productType = "com.apple.product-type.application"; };
+98F54143AB4E86B28C3AFEE0 = { isa = PBXProject; attributes = { LastUpgradeCheck = 1600; }; buildConfigurationList = 862894B703A6DEDF96A9DD6C; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,tr,Base); mainGroup = 64292B1C2B2E13EAD8788FC8; productRefGroup = FBDC4F23F93125BBEEAE800C; projectDirPath = ""; projectRoot = ""; targets = (0E8A3AD980EC179856012B7E); };
+}; rootObject = 98F54143AB4E86B28C3AFEE0; }

@@ -1,0 +1,25 @@
+name: Build and Test
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core regression tests
+        run: swift test
+      - name: Build universal application
+        run: Scripts/build.sh
+      - name: Provider process and sanitized bridge tests
+        run: |
+          python3 Scripts/provider-tests.py dist/DevPet.app/Contents/MacOS/DevPet
+          python3 Scripts/bridge-tests.py dist/DevPet.app/Contents/MacOS/DevPet
+      - name: Native window smoke test (demo, no credentials)
+        run: |
+          dist/DevPet.app/Contents/MacOS/DevPet --smoke-test "$RUNNER_TEMP/window-checks.json"
+          python3 -c 'import json,sys; checks=json.load(open(sys.argv[1])); assert checks and all(checks.values()), checks' "$RUNNER_TEMP/window-checks.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DevPet-local-build
+          path: dist/DevPet.app

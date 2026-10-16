@@ -1,0 +1,77 @@
+name: GitHub Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+      - run: Scripts/build.sh
+      - name: Provider process and sanitized bridge tests
+        run: |
+          python3 Scripts/provider-tests.py dist/DevPet.app/Contents/MacOS/DevPet
+          python3 Scripts/bridge-tests.py dist/DevPet.app/Contents/MacOS/DevPet
+      - name: Import Developer ID certificate if configured
+        env:
+          CERT: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.BUILD_KEYCHAIN_PASSWORD }}
+        shell: bash
+        run: |
+          if [[ -z "$CERT" ]]; then echo 'Building local unsigned release'; exit 0; fi
+          printf '%s' "$CERT" | base64 --decode > "$RUNNER_TEMP/devpet.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/devpet.keychain-db"
+          security set-keychain-settings -lut 21600 "$RUNNER_TEMP/devpet.keychain-db"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/devpet.keychain-db"
+          security import "$RUNNER_TEMP/devpet.p12" -k "$RUNNER_TEMP/devpet.keychain-db" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/devpet.keychain-db"
+          security list-keychains -d user -s "$RUNNER_TEMP/devpet.keychain-db" login.keychain-db
+      - name: Sign if configured
+        env:
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+        run: |
+          if [[ -n "$DEVELOPER_ID_APPLICATION" ]]; then Scripts/sign.sh; fi
+      - run: Scripts/dmg.sh
+      - name: Notarize if configured
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+        run: |
+          if [[ -z "$APPLE_ID" || -z "$DEVELOPER_ID_APPLICATION" ]]; then echo 'Not notarized'; exit 0; fi
+          xcrun notarytool store-credentials devpet-ci --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD"
+          NOTARY_PROFILE=devpet-ci Scripts/notarize.sh
+          REQUIRE_NOTARIZATION=1 Scripts/validate.sh
+      - name: Validate artifacts
+        run: |
+          Scripts/validate.sh
+          ditto -c -k --sequesterRsrc --keepParent dist/DevPet.app dist/DevPet.app.zip
+          shasum -a 256 dist/DevPet.dmg dist/DevPet.app.zip > dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DevPet-release
+          path: |
+            dist/DevPet.dmg
+            dist/DevPet.app.zip
+            dist/SHA256SUMS
+      - name: Publish draft release for tags
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo 'Release already exists; keep its reviewed assets unchanged.'
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/DevPet.dmg dist/DevPet.app.zip dist/SHA256SUMS --draft --generate-notes --title "DevPet ${GITHUB_REF_NAME}"
+          fi
+      - name: Remove temporary credentials
+        if: always()
+        run: |
+          if [[ -f "$RUNNER_TEMP/devpet.keychain-db" ]]; then security delete-keychain "$RUNNER_TEMP/devpet.keychain-db"; fi
+          if [[ -f "$RUNNER_TEMP/devpet.p12" ]]; then rm "$RUNNER_TEMP/devpet.p12"; fi
