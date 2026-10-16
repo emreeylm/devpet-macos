@@ -61,7 +61,7 @@ struct CodexProvider: UsageProvider {
             var data = try JSONSerialization.data(withJSONObject: value); data.append(10)
             try input.fileHandleForWriting.write(contentsOf: data)
         }
-        try send(["id": 1, "method": "initialize", "params": ["clientInfo": ["name": "devpet", "title": "DevPet", "version": "1.6.1"]]])
+        try send(["id": 1, "method": "initialize", "params": ["clientInfo": ["name": "devpet", "title": "DevPet", "version": "1.6.2"]]])
         var buffer = Data(), total = 0
         var bytes = [UInt8](repeating: 0, count: 8192)
         while true {

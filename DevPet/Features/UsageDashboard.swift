@@ -240,7 +240,7 @@ struct PetQuotaBadge: View {
                             .foregroundStyle(quota.map { $0.remaining < 15 ? Color(hex: 0xFF7198) : $0.remaining <= 40 ? Color(hex: 0xF4C263) : model.accent } ?? .secondary)
                     }.frame(maxWidth: .infinity)
                     .accessibilityLabel(snapshot.service.title + " " + (kind == .fiveHour ? "5h" : model.text("Weekly", "Haftalık")))
-                    .accessibilityValue(quota.map { "\(Int($0.remaining.rounded()))% " + model.text("remaining", "kaldı") } ?? model.text("Unavailable", "Veri yok"))
+                    .accessibilityValue(petRemainingValue(quota, model: model))
                 }
             }
         }
@@ -248,6 +248,11 @@ struct PetQuotaBadge: View {
         .background(model.preferences.dark ? Color(hex: 0x101620).opacity(0.96) : Color(hex: 0xE8ECE5).opacity(0.96), in: RoundedRectangle(cornerRadius: 6 * scale))
         .overlay(RoundedRectangle(cornerRadius: 6 * scale).stroke(LinearGradient(colors: [model.accent.opacity(0.65), Color(hex: 0xAC82E8).opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: max(1, (scale * displayScale).rounded()) / displayScale))
     }
+}
+@MainActor private func petRemainingValue(_ quota: QuotaWindow?, model: AppModel) -> String {
+    guard let quota else { return model.text("Unavailable", "Veri yok") }
+    let percentage = Int(quota.remaining.rounded())
+    return String(percentage) + "% " + model.text("remaining", "kaldı")
 }
 @MainActor private func petResetCountdown(_ snapshot: UsageSnapshot, model: AppModel) -> String {
     guard let reset = snapshot.window(.fiveHour, at: model.now, maxAge: model.preferences.staleAge)?.resetsAt else { return "↻ —" }

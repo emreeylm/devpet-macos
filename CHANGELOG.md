@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.2 — 2026-10-16
+
+Extract the quota accessibility-value formatter into a typed helper to avoid a Swift compiler type-check timeout on the GitHub-hosted Xcode toolchain. Visible quota content and behavior are unchanged.
+
 ## 1.6.1 — 2026-10-16
 
 Order display choices consistently as Minimal, Pet Only, Expanded in settings, menu bar and context menu. Raise the shared size limit from 200% to 250%, preserving the current size selection. Extend persistence/scaling regression checks and 1×/2× previews through 250%.
